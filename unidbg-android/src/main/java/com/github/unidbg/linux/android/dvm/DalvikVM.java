@@ -128,7 +128,7 @@ public class DalvikVM extends BaseVM implements VM {
                 }
             }
         });
-        
+
         Pointer _GetSuperclass = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -493,6 +493,18 @@ public class DalvikVM extends BaseVM implements VM {
                 if (dvmClass == null) {
                     throw new BackendException();
                 } else {
+                    if ("android/app/Activity".equals(dvmClass.getClassName())
+                            || "android/app/Application".equals(dvmClass.getClassName())) {
+                        switch (name) {
+                            case "getPackageManager":
+                            case "getPackageName":
+                                int hash = resolveClass("android/content/ContextWrapper").getMethodID(name, args);
+                                if (verbose && hash != 0) {
+                                    System.out.printf("JNIEnv->GetMethodID(%s.%s%s) => 0x%x was called from %s%n", "android/content/ContextWrapper", name, args, hash & 0xffffffffL, context.getLRPointer());
+                                }
+                                return hash;
+                        }
+                    }
                     int hash = dvmClass.getMethodID(name, args);
                     if (verbose && hash != 0) {
                         System.out.printf("JNIEnv->GetMethodID(%s.%s%s) => 0x%x was called from %s%n", dvmClass.getClassName(), name, args, hash & 0xffffffffL, context.getLRPointer());
@@ -1635,7 +1647,7 @@ public class DalvikVM extends BaseVM implements VM {
                 return 0;
             }
         });
-        
+
         Pointer _SetLongField = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -1690,7 +1702,7 @@ public class DalvikVM extends BaseVM implements VM {
                 return 0;
             }
         });
-        
+
         Pointer _SetDoubleField = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -2761,7 +2773,7 @@ public class DalvikVM extends BaseVM implements VM {
                 throw new UnsupportedOperationException();
             }
         });
-        
+
         Pointer _NewByteArray = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -2805,7 +2817,7 @@ public class DalvikVM extends BaseVM implements VM {
                 return addLocalObject(new IntArray(DalvikVM.this, new int[size]));
             }
         });
-        
+
         Pointer _NewDoubleArray = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -3204,7 +3216,7 @@ public class DalvikVM extends BaseVM implements VM {
                 throw new UnsupportedOperationException();
             }
         });
-        
+
         Pointer _SetIntArrayRegion = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -3247,7 +3259,7 @@ public class DalvikVM extends BaseVM implements VM {
                 return 0;
             }
         });
-        
+
         Pointer _SetDoubleArrayRegion = svcMemory.registerSvc(new ArmSvc() {
             @Override
             public long handle(Emulator<?> emulator) {
@@ -3368,9 +3380,9 @@ public class DalvikVM extends BaseVM implements VM {
                 }
                 if (log.isDebugEnabled()) {
                     log.debug("GetStringRegion string=" + string + ", value=" + value + ", start=" + start +
-                            ", length=" + length + ", buf" + buf +", lr=" + context.getLRPointer());
+                            ", length=" + length + ", buf" + buf + ", lr=" + context.getLRPointer());
                 }
-                byte[] data = Arrays.copyOfRange(bytes, start, start+length+1);
+                byte[] data = Arrays.copyOfRange(bytes, start, start + length + 1);
                 buf.write(0, data, 0, data.length);
                 return JNI_OK;
             }
@@ -3393,9 +3405,9 @@ public class DalvikVM extends BaseVM implements VM {
                 byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
                 if (log.isDebugEnabled()) {
                     log.debug("GetStringUTFRegion string=" + string + ", value=" + value + ", start=" + start +
-                            ", length=" + length + ", buf" + buf +", lr=" + context.getLRPointer());
+                            ", length=" + length + ", buf" + buf + ", lr=" + context.getLRPointer());
                 }
-                byte[] data = Arrays.copyOfRange(bytes, start, start+length+1);
+                byte[] data = Arrays.copyOfRange(bytes, start, start + length + 1);
                 buf.write(0, data, 0, data.length);
                 return JNI_OK;
             }
@@ -3522,7 +3534,7 @@ public class DalvikVM extends BaseVM implements VM {
                 }
                 if (dvmGlobalObject != null) {
                     return dvmGlobalObject.weak ? JNIWeakGlobalRefType : JNIGlobalRefType;
-                } else if(dvmLocalObject != null) {
+                } else if (dvmLocalObject != null) {
                     return JNILocalRefType;
                 } else {
                     return JNIInvalidRefType;
